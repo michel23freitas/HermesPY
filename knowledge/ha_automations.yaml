@@ -1,0 +1,42 @@
+- id: '1780617987595'
+  alias: 'Automação: Tomada com Sensor de Movimento'
+  description: Liga a tomada por 10 min. Se detectar movimento novamente, o tempo
+    reinicia.
+  triggers:
+  - entity_id: binary_sensor.closed_camera_intelbras_motion_alarm
+    to: 'on'
+    trigger: state
+  actions:
+  - target:
+      entity_id: switch.tomada_1_socket_1
+    action: switch.turn_on
+  - delay:
+      hours: 0
+      minutes: 10
+      seconds: 0
+      milliseconds: 0
+  - target:
+      entity_id: switch.tomada_1_socket_1
+    action: switch.turn_off
+  mode: restart
+- id: '1780783416973'
+  alias: Desligar escada automático
+  description: ''
+  triggers:
+  - type: turned_on
+    device_id: 0127d2fac7c66386c778400241922b78
+    entity_id: df71b831bc940fe742111ecd2eceec37
+    domain: light
+    trigger: device
+    for:
+      hours: 0
+      minutes: 15
+      seconds: 0
+  conditions: []
+  actions:
+  - action: light.turn_off
+    metadata: {}
+    target:
+      entity_id: light.fundo_1
+    data: {}
+  mode: single

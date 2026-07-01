@@ -1,0 +1,13 @@
+version: "3.8"
+
+services:
+  hermes:
+    build: .
+    container_name: hermes
+    restart: unless-stopped
+    env_file: .env
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+      - /sys:/sys:ro
+    environment:
+      - TZ=America/Sao_Paulo

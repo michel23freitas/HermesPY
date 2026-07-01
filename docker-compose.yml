@@ -1,0 +1,20 @@
+services:
+  hermes:
+    build: .
+    container_name: hermes
+    restart: unless-stopped
+    env_file: .env
+    privileged: true
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+      - /sys:/sys:ro
+      - /var/log:/host_log:ro
+      - /opt/hermes/data:/app/data
+      - /opt/hermes/knowledge:/app/knowledge
+      - /opt/homeassistant/config:/opt/homeassistant/config:ro
+      - /opt/musicassistant:/opt/musicassistant:ro
+      - /mnt/backups/windows:/mnt/backups/windows:ro
+      - /opt/backup-pending:/opt/backup-pending
+      - /etc/cron.d:/host_cron
+    environment:
+      - TZ=America/Sao_Paulo

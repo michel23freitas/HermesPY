@@ -1,0 +1,18 @@
+
+# Loads default set of integrations. Do not remove.
+default_config:
+
+# Load frontend themes from the themes folder
+frontend:
+  themes: !include_dir_merge_named themes
+
+automation: !include automations.yaml
+script: !include scripts.yaml
+scene: !include scenes.yaml
+template:
+  - sensor:
+      - name: "S23 Michel Sleep Duration Hours"
+        unique_id: s23_michel_sleep_duration_hours
+        unit_of_measurement: "h"
+        device_class: duration
+        state: "{{ (states('sensor.s23_michel_sleep_duration') | float(0) / 60) | round(2) }}"
