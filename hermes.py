@@ -268,6 +268,7 @@ TOOLS = [
     {"type":"function","function":{"name":"file_search","description":"Busca arquivos no sistema por nome ou padrão. Use para localizar compose files, scripts, configurações.","parameters":{"type":"object","properties":{"pattern":{"type":"string","description":"Padrão de nome. Ex: docker-compose, backup, configuration"}},"required":["pattern"]}}},
     {"type":"function","function":{"name":"task_manage","description":"Gerencia tarefas de monitoramento dinâmico. Tipos disponíveis: monitor_ram | monitor_container | monitor_temperatura.","parameters":{"type":"object","properties":{"action":{"type":"string","enum":["add","list","remove"]},"tipo":{"type":"string","description":"Tipo da tarefa: monitor_ram | monitor_container | monitor_temperatura"},"config":{"type":"object","description":"Configuração: {limit: 85} para ram/temp, {container: 'nome'} para container"},"task_id":{"type":"integer","description":"ID da tarefa (necessário para remove)"}},"required":["action"]}}},
     {"type":"function","function":{"name":"shell_read","description":"Executa comandos de leitura no sistema. Use para: dmesg, journalctl, crontab, ps, df, free, ip, cat, systemctl. NAO use para comandos que modificam o sistema.","parameters":{"type":"object","properties":{"command":{"type":"string","description":"Comando shell de leitura a executar."}},"required":["command"]}}},
+    {"type":"function","function":{"name":"marmitex_cardapio","description":"Busca o cardápio do dia do Marmitex Marisa. Retorna se está aberto, os itens disponíveis com preços e o link para pedido.","parameters":{"type":"object","properties":{},"required":[]}}},
 ]
 
 def tool_docker_ps():
@@ -410,6 +411,38 @@ def tool_shell_read(command):
         if b in cmd_lower: return f"Bloqueado: comando destrutivo ({b})"
     return run_cmd(command, timeout=15)
 
+def tool_marmitex_cardapio():
+    JSON_URL = "https://raw.githubusercontent.com/michel23freitas/HermesPY/main/cardapio.json"
+    try:
+        r = requests.get(JSON_URL, timeout=10)
+        if r.status_code != 200:
+            return f"Erro ao buscar cardápio: HTTP {r.status_code}"
+        data = r.json()
+
+        if not data.get("aberto", False):
+            return f"❌ Marmitex Marisa fechado hoje ({data.get('data', '?')})."
+
+        itens = data.get("itens", [])
+        url = data.get("url_pedido", "https://www.marmitexmarisa.com.br/cardapio/")
+
+        if not itens:
+            return f"🍱 Marisa aberto, mas cardápio não carregou.\nPeça aqui: {url}"
+
+        linhas = [f"🍱 Cardápio Marmitex Marisa — {data.get('data', '?')}"]
+        for item in itens:
+            nome = item.get("nome", "")
+            preco = item.get("preco", "")
+            desc = item.get("descricao", "")
+            linha = f"• {nome}"
+            if preco: linha += f" — {preco}"
+            if desc: linha += f"\n  {desc}"
+            linhas.append(linha)
+        linhas.append(f"\n🔗 Pedir: {url}")
+        return "\n".join(linhas)
+
+    except Exception as e:
+        return f"Erro ao buscar cardápio Marisa: {e}"
+
 def tool_docker_inspect(container):
     result = run_cmd(f"docker inspect {container} --format 'Imagem: {{{{.Config.Image}}}}\\nStatus: {{{{.State.Status}}}}\\nNetwork: {{{{.HostConfig.NetworkMode}}}}\\nRestart: {{{{.HostConfig.RestartPolicy.Name}}}}' 2>&1")
     volumes = run_cmd(f"docker inspect {container} --format '{{{{range .Mounts}}}}{{{{.Source}}}} → {{{{.Destination}}}}\\n{{{{end}}}}'")
@@ -483,6 +516,7 @@ TOOL_MAP = {
     "file_search":     lambda a: tool_file_search(a["pattern"]),
     "task_manage":     lambda a: tool_task_manage(a["action"], a.get("tipo"), a.get("config"), a.get("task_id")),
     "shell_read":      lambda a: tool_shell_read(a["command"]),
+    "marmitex_cardapio": lambda a: tool_marmitex_cardapio(),
 }
 
 def execute_tool(name, args):
@@ -665,12 +699,20 @@ def send_startup_notification():
 
 def watchdog():
     prev = {}
+    _ultimo_aviso_marisa = None
     while True:
         try:
             time.sleep(60); curr = get_containers_status()
             for n, s in curr.items():
                 if n in prev and s != prev[n]: bot.send_message(ALLOWED_CHAT_ID, f"[{'✅' if s == '+' else '❌'}] {n}")
             prev = curr; _run_dynamic_tasks()
+            agora = datetime.now()
+            if agora.weekday() < 5 and agora.hour == 12 and agora.minute < 2:
+                hoje = agora.strftime("%Y-%m-%d")
+                if _ultimo_aviso_marisa != hoje:
+                    _ultimo_aviso_marisa = hoje
+                    cardapio = tool_marmitex_cardapio()
+                    bot.send_message(ALLOWED_CHAT_ID, f"🕛 Hora do almoço!\n\n{cardapio}")
         except: pass
 
 def _run_dynamic_tasks():
