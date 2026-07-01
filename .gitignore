@@ -1,3 +1,5 @@
 .env
 *.log
 __pycache__/
+enrola.txt
+INSTRUCOES_IMPLEMENTACAO.md
