@@ -4,7 +4,7 @@
 
 import asyncio
 import json
-from datetime import datetime
+from datetime import datetime, timedelta
 import re
 
 import pytz
@@ -35,6 +35,15 @@ DIAS_SEMANA_TITULO = {
 
 def montar_url_cardapio(dia_semana_slug: str) -> str:
     return f"{BASE_URL}/cardapio/itens/cardapio-{dia_semana_slug}"
+
+
+def resolver_dia_cardapio(agora: datetime) -> tuple[str, str]:
+    # O site costuma virar o cardápio no fim da tarde; após 18h já mostramos o próximo dia.
+    dia_base = agora
+    if agora.hour >= 18:
+        dia_base = agora + timedelta(days=1)
+
+    return DIAS_SEMANA[dia_base.weekday()], DIAS_SEMANA_TITULO[dia_base.weekday()]
 
 
 def extrair_itens_do_bloco(texto_pagina: str, titulo_bloco: str) -> list[dict]:
@@ -135,8 +144,7 @@ async def extrair_itens_do_dom(page, titulo_bloco: str) -> list[dict]:
 
 async def scrape():
     agora = datetime.now(TZ)
-    dia_semana_slug = DIAS_SEMANA[agora.weekday()]
-    dia_semana_titulo = DIAS_SEMANA_TITULO[agora.weekday()]
+    dia_semana_slug, dia_semana_titulo = resolver_dia_cardapio(agora)
     url_cardapio = montar_url_cardapio(dia_semana_slug)
     resultado = {
         "data": agora.strftime("%Y-%m-%d"),
@@ -154,7 +162,7 @@ async def scrape():
         page.set_default_navigation_timeout(TIMEOUT_MS)
 
         try:
-            await page.goto(url_cardapio, wait_until="networkidle", timeout=TIMEOUT_MS)
+            await page.goto(url_cardapio, wait_until="domcontentloaded", timeout=TIMEOUT_MS)
         except Exception as e:
             resultado["erro"] = f"Timeout ao carregar site: {e}"
             with open("cardapio.json", "w", encoding="utf-8") as f:
