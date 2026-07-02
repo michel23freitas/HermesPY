@@ -1,9 +1,9 @@
 {
   "data": "2026-07-01",
-  "dia_semana": "Wednesday",
-  "hora_scraping": "21:03",
+  "dia_semana": "quarta-feira",
+  "hora_scraping": "22:55",
   "aberto": false,
   "itens": [],
-  "url_pedido": "https://www.marmitexmarisa.com.br/cardapio/",
-  "erro": "Timeout ao carregar site: Page.goto: Timeout 30000ms exceeded.\nCall log:\n  - navigating to \"https://www.marmitexmarisa.com.br/cardapio/\", waiting until \"networkidle\"\n"
+  "url_pedido": "https://www.marmitexmarisa.com.br/cardapio/itens/cardapio-quarta-feira",
+  "erro": "Timeout ao carregar site: Page.goto: Timeout 60000ms exceeded.\nCall log:\n  - navigating to \"https://www.marmitexmarisa.com.br/cardapio/itens/cardapio-quarta-feira\", waiting until \"networkidle\"\n"
 }
