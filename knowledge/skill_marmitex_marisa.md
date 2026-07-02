@@ -19,12 +19,14 @@ Quando o usuário perguntar sobre cardápio, se o Marisa está aberto, ou quiser
 - Se "itens": [] mas "aberto": true → cardápio não carregou, enviar link direto
 - Sempre anexar url_pedido ao final da resposta sobre cardápio
 - Não inventar itens ou preços
+- Responder em texto limpo, com itens em lista, preço ao lado e descrição logo abaixo quando existir
+- Nunca devolver o JSON bruto nem anexar o arquivo cardapio.json na resposta
 
 ## Fluxo obrigatório
 1. Chamar tool marmitex_cardapio
-2. Se fechado → "Marisa fechado hoje."
-3. Se aberto e com itens → listar itens + link
-4. Se aberto sem itens → "Cardápio indisponível. Acesse: [url]"
+2. Se fechado → "Marisa fechada hoje. Acesse: [url]"
+3. Se aberto e com itens → listar itens em formato limpo + link
+4. Se aberto sem itens → "Cardápio indisponível hoje. Acesse: [url]"
 
 ## Diagnóstico
 - Verificar: curl https://raw.githubusercontent.com/michel23freitas/HermesPY/refs/heads/main/cardapio.json

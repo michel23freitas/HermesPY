@@ -413,6 +413,11 @@ def tool_shell_read(command):
 
 def tool_marmitex_cardapio():
     JSON_URL = "https://raw.githubusercontent.com/michel23freitas/HermesPY/refs/heads/main/cardapio.json"
+    def formatar_preco(valor):
+        if not valor:
+            return ""
+        return valor.replace(".", ",")
+
     try:
         r = requests.get(JSON_URL, timeout=10)
         if r.status_code != 200:
@@ -420,24 +425,27 @@ def tool_marmitex_cardapio():
         data = r.json()
 
         if not data.get("aberto", False):
-            return f"❌ Marmitex Marisa fechado hoje ({data.get('data', '?')})."
+            url = data.get("url_pedido", "https://www.marmitexmarisa.com.br/cardapio/")
+            data_ref = data.get("data", "?")
+            return f"Marisa fechada hoje ({data_ref}).\nAcesse: {url}"
 
         itens = data.get("itens", [])
         url = data.get("url_pedido", "https://www.marmitexmarisa.com.br/cardapio/")
+        data_ref = data.get("data", "?")
 
         if not itens:
-            return f"🍱 Marisa aberto, mas cardápio não carregou.\nPeça aqui: {url}"
+            return f"Cardápio indisponível hoje ({data_ref}).\nAcesse: {url}"
 
-        linhas = [f"🍱 Cardápio Marmitex Marisa — {data.get('data', '?')}"]
+        linhas = [f"Cardápio Marmitex Marisa - {data_ref}"]
         for item in itens:
             nome = item.get("nome", "")
-            preco = item.get("preco", "")
+            preco = formatar_preco(item.get("preco", ""))
             desc = item.get("descricao", "")
-            linha = f"• {nome}"
+            linha = f"- {nome}"
             if preco: linha += f" — {preco}"
             if desc: linha += f"\n  {desc}"
             linhas.append(linha)
-        linhas.append(f"\n🔗 Pedir: {url}")
+        linhas.append(f"\nPedir: {url}")
         return "\n".join(linhas)
 
     except Exception as e:
