@@ -110,7 +110,10 @@ async def scrape():
 
         try:
             await page.goto(url_cardapio_mobile, wait_until="domcontentloaded", timeout=TIMEOUT_MS)
-            await page.wait_for_selector(".card-item-menu[data-dadositem]", timeout=TIMEOUT_MS)
+            try:
+                await page.wait_for_selector(".card-item-menu[data-dadositem]", state="attached", timeout=10000)
+            except Exception:
+                pass
         except Exception as e:
             resultado["erro"] = f"Timeout ao carregar site: {e}"
             with open("cardapio.json", "w", encoding="utf-8") as f:
@@ -127,6 +130,7 @@ async def scrape():
 
         if fechado:
             resultado["aberto"] = False
+            resultado["itens"] = await extrair_itens_do_dom(page, dia_semana_slug)
         else:
             resultado["aberto"] = True
             resultado["itens"] = await extrair_itens_do_dom(page, dia_semana_slug)
