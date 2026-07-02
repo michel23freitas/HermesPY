@@ -5,7 +5,6 @@
 import asyncio
 import json
 from datetime import datetime, timedelta
-import re
 
 import pytz
 from playwright.async_api import async_playwright
@@ -50,113 +49,47 @@ def resolver_dia_cardapio(agora: datetime) -> tuple[str, str]:
     return DIAS_SEMANA[dia_base.weekday()], DIAS_SEMANA_TITULO[dia_base.weekday()]
 
 
-def extrair_itens_do_bloco(texto_pagina: str, titulo_bloco: str) -> list[dict]:
-    linhas = [linha.strip() for linha in texto_pagina.splitlines()]
-    inicio = None
-    for idx, linha in enumerate(linhas):
-        if linha == f"### {titulo_bloco}":
-            inicio = idx + 1
-            break
-
-    if inicio is None:
-        return []
-
-    fim = len(linhas)
-    for idx in range(inicio, len(linhas)):
-        if linhas[idx].startswith("### ") and linhas[idx] != f"### {titulo_bloco}":
-            fim = idx
-            break
-
-    bloco = [linha for linha in linhas[inicio:fim] if linha and linha not in {"Comprar", "Indisponível"}]
-    itens = []
-    i = 0
-    while i < len(bloco):
-        nome = bloco[i]
-        if nome.startswith("Nenhum item encontrado"):
-            break
-
-        if i + 2 >= len(bloco):
-            break
-
-        descricao = bloco[i + 1]
-        preco = bloco[i + 2]
-
-        if not preco.startswith("R$"):
-            i += 1
-            continue
-
-        itens.append(
-            {
-                "nome": nome,
-                "preco": preco,
-                "descricao": descricao if not descricao.startswith("R$") else None,
-            }
-        )
-        i += 3
-
-    return itens
-
-
-async def extrair_itens_do_dom(page, titulo_bloco: str) -> list[dict]:
-    itens = await page.evaluate(
-        """() => document.body ? document.body.innerText : ''"""
-    )
-    itens = extrair_itens_do_bloco(itens, titulo_bloco)
-
-    if itens:
-        return itens
-
+async def extrair_itens_do_dom(page, dia_semana_slug: str) -> list[dict]:
     return await page.evaluate(
-        """(tituloBloco) => {
+        """(diaSemanaSlug) => {
             const normalizar = (texto) => (texto || '').replace(/\\s+/g, ' ').trim();
-            const textoTitulo = normalizar(tituloBloco).toLowerCase();
-            const headings = [...document.querySelectorAll('h1,h2,h3,h4,h5')];
-            const heading = headings.find((h) => normalizar(h.textContent).toLowerCase() === textoTitulo);
-            if (!heading) return [];
-
-            const isHeading = (node) => node && /^H[1-5]$/.test(node.tagName);
+            const formatarPreco = (valor) => {
+                const numero = Number.parseFloat(String(valor || '').replace(',', '.'));
+                if (Number.isNaN(numero)) return null;
+                return `R$ ${numero.toFixed(2).replace('.', ',')}`;
+            };
             const itens = [];
-            let node = heading.nextElementSibling;
 
-            while (node && !isHeading(node)) {
-                const texto = normalizar(node.innerText || node.textContent);
-                const textoLower = texto.toLowerCase();
-
-                if (texto && !["bebidas", "sobremesas", "promoções", "promocao", "promoção"].some((p) => textoLower.includes(p))) {
-                    const precoMatch = texto.match(/R\\$\\s*\\d+(?:[.,]\\d{2})?/);
-                    const nomeNode = node.querySelector('h1,h2,h3,h4,.nome,.title,[class*="name"]');
-                    let nome = nomeNode ? normalizar(nomeNode.textContent) : '';
-
-                    if (!nome) {
-                        const linhas = texto.split('\\n').map(normalizar).filter(Boolean);
-                        nome = linhas.find((linha) => !linha.toLowerCase().startsWith('r$') && !['comprar', 'indisponível', 'indisponivel'].includes(linha.toLowerCase())) || '';
-                    }
-
-                    if (nome && precoMatch) {
-                        const linhas = texto.split('\\n').map(normalizar).filter(Boolean);
-                        const nomeIndex = linhas.indexOf(nome);
-                        const resto = nomeIndex >= 0 ? linhas.slice(nomeIndex + 1).filter((linha) => !linha.toLowerCase().startsWith('r$') && !['comprar', 'indisponível', 'indisponivel'].includes(linha.toLowerCase())) : [];
-                        const descricao = resto[0] || null;
-                        itens.push({
-                            nome,
-                            preco: precoMatch[0].replace('.', ','),
-                            descricao,
-                        });
-                    }
+            for (const card of document.querySelectorAll('.card-item-menu[data-dadositem]')) {
+                let dados = {};
+                try {
+                    dados = JSON.parse(card.getAttribute('data-dadositem') || '{}');
+                } catch {
+                    dados = {};
                 }
 
-                node = node.nextElementSibling;
+                if (dados.sessionLink && dados.sessionLink !== `cardapio-${diaSemanaSlug}`) {
+                    continue;
+                }
+
+                const nome = normalizar(dados.nomeitem) || normalizar(card.querySelector('.nome-item-menu')?.textContent);
+                const preco = formatarPreco(dados.precoitem) || normalizar(card.querySelector('.lowest-price')?.textContent).replace(/^.*?(R\\$\\s*\\d+[,.]\\d{2}).*$/, '$1');
+                const descricao = normalizar(card.querySelector('.desc-item-menu')?.textContent) || null;
+
+                if (nome && preco && !itens.some((item) => item.nome === nome && item.preco === preco)) {
+                    itens.push({ nome, preco, descricao });
+                }
             }
 
             return itens;
         }""",
-        titulo_bloco,
+        dia_semana_slug,
     )
 
 
 async def scrape():
     agora = datetime.now(TZ)
-    dia_semana_slug, dia_semana_titulo = resolver_dia_cardapio(agora)
+    dia_semana_slug, _ = resolver_dia_cardapio(agora)
     url_cardapio = montar_url_cardapio(dia_semana_slug)
     url_cardapio_mobile = montar_url_cardapio_mobile(dia_semana_slug)
     resultado = {
@@ -166,6 +99,7 @@ async def scrape():
         "aberto": False,
         "itens": [],
         "url_pedido": url_cardapio,
+        "url_scraping": url_cardapio_mobile,
     }
 
     async with async_playwright() as p:
@@ -176,25 +110,13 @@ async def scrape():
 
         try:
             await page.goto(url_cardapio_mobile, wait_until="domcontentloaded", timeout=TIMEOUT_MS)
+            await page.wait_for_selector(".card-item-menu[data-dadositem]", timeout=TIMEOUT_MS)
         except Exception as e:
             resultado["erro"] = f"Timeout ao carregar site: {e}"
             with open("cardapio.json", "w", encoding="utf-8") as f:
                 json.dump(resultado, f, ensure_ascii=False, indent=2)
             await browser.close()
             return
-
-        # A página principal é só um wrapper; o cardápio real fica no iframe mobile.
-        frame = page.main_frame
-        if page.frames:
-            for candidate in page.frames:
-                if candidate.url and candidate.url != page.url:
-                    frame = candidate
-                    break
-
-        if frame.url and frame.url != page.url:
-            texto_pagina = await frame.evaluate("() => document.body ? document.body.innerText : ''")
-        else:
-            texto_pagina = await page.evaluate("() => document.body ? document.body.innerText : ''")
 
         fechado = (
             await page.query_selector("text=fechado")
@@ -207,7 +129,7 @@ async def scrape():
             resultado["aberto"] = False
         else:
             resultado["aberto"] = True
-            resultado["itens"] = extrair_itens_do_bloco(texto_pagina, f"Cardápio {dia_semana_titulo}")
+            resultado["itens"] = await extrair_itens_do_dom(page, dia_semana_slug)
 
         await browser.close()
 
