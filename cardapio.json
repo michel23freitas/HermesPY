@@ -1,0 +1,9 @@
+{
+  "data": "2026-07-01",
+  "dia_semana": "Wednesday",
+  "hora_scraping": "21:03",
+  "aberto": false,
+  "itens": [],
+  "url_pedido": "https://www.marmitexmarisa.com.br/cardapio/",
+  "erro": "Timeout ao carregar site: Page.goto: Timeout 30000ms exceeded.\nCall log:\n  - navigating to \"https://www.marmitexmarisa.com.br/cardapio/\", waiting until \"networkidle\"\n"
+}
