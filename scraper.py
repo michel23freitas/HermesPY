@@ -37,6 +37,10 @@ def montar_url_cardapio(dia_semana_slug: str) -> str:
     return f"{BASE_URL}/cardapio/itens/cardapio-{dia_semana_slug}"
 
 
+def montar_url_cardapio_mobile(dia_semana_slug: str) -> str:
+    return f"{BASE_URL}/cardapio/itens/cardapio-{dia_semana_slug}?dvc=mobile&ed_mobile_iframe=1"
+
+
 def resolver_dia_cardapio(agora: datetime) -> tuple[str, str]:
     # O site costuma virar o cardápio no fim da tarde; após 18h já mostramos o próximo dia.
     dia_base = agora
@@ -94,6 +98,14 @@ def extrair_itens_do_bloco(texto_pagina: str, titulo_bloco: str) -> list[dict]:
 
 
 async def extrair_itens_do_dom(page, titulo_bloco: str) -> list[dict]:
+    itens = await page.evaluate(
+        """() => document.body ? document.body.innerText : ''"""
+    )
+    itens = extrair_itens_do_bloco(itens, titulo_bloco)
+
+    if itens:
+        return itens
+
     return await page.evaluate(
         """(tituloBloco) => {
             const normalizar = (texto) => (texto || '').replace(/\\s+/g, ' ').trim();
@@ -146,6 +158,7 @@ async def scrape():
     agora = datetime.now(TZ)
     dia_semana_slug, dia_semana_titulo = resolver_dia_cardapio(agora)
     url_cardapio = montar_url_cardapio(dia_semana_slug)
+    url_cardapio_mobile = montar_url_cardapio_mobile(dia_semana_slug)
     resultado = {
         "data": agora.strftime("%Y-%m-%d"),
         "dia_semana": dia_semana_slug,
@@ -162,13 +175,26 @@ async def scrape():
         page.set_default_navigation_timeout(TIMEOUT_MS)
 
         try:
-            await page.goto(url_cardapio, wait_until="domcontentloaded", timeout=TIMEOUT_MS)
+            await page.goto(url_cardapio_mobile, wait_until="domcontentloaded", timeout=TIMEOUT_MS)
         except Exception as e:
             resultado["erro"] = f"Timeout ao carregar site: {e}"
             with open("cardapio.json", "w", encoding="utf-8") as f:
                 json.dump(resultado, f, ensure_ascii=False, indent=2)
             await browser.close()
             return
+
+        # A página principal é só um wrapper; o cardápio real fica no iframe mobile.
+        frame = page.main_frame
+        if page.frames:
+            for candidate in page.frames:
+                if candidate.url and candidate.url != page.url:
+                    frame = candidate
+                    break
+
+        if frame.url and frame.url != page.url:
+            texto_pagina = await frame.evaluate("() => document.body ? document.body.innerText : ''")
+        else:
+            texto_pagina = await page.evaluate("() => document.body ? document.body.innerText : ''")
 
         fechado = (
             await page.query_selector("text=fechado")
@@ -181,7 +207,7 @@ async def scrape():
             resultado["aberto"] = False
         else:
             resultado["aberto"] = True
-            resultado["itens"] = await extrair_itens_do_dom(page, f"Cardápio {dia_semana_titulo}")
+            resultado["itens"] = extrair_itens_do_bloco(texto_pagina, f"Cardápio {dia_semana_titulo}")
 
         await browser.close()
 
