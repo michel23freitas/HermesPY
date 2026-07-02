@@ -9,7 +9,7 @@ Quando o usuário perguntar sobre cardápio, se o Marisa está aberto, ou quiser
 |---|---|
 | Restaurante | Marmitex Marisa |
 | URL pedido | https://www.marmitexmarisa.com.br/cardapio/ |
-| Fonte cardápio | `https://raw.githubusercontent.com/michel23freitas/HermesPY/main/cardapio.json` |
+| Fonte cardápio | `https://raw.githubusercontent.com/michel23freitas/HermesPY/refs/heads/main/cardapio.json` |
 | Tool Hermes | `marmitex_cardapio` |
 | Horário aviso automático | ~12h (dias úteis) |
 
@@ -27,7 +27,7 @@ Quando o usuário perguntar sobre cardápio, se o Marisa está aberto, ou quiser
 4. Se aberto sem itens → "Cardápio indisponível. Acesse: [url]"
 
 ## Diagnóstico
-- Verificar: curl https://raw.githubusercontent.com/michel23freitas/HermesPY/main/cardapio.json
+- Verificar: curl https://raw.githubusercontent.com/michel23freitas/HermesPY/refs/heads/main/cardapio.json
 - Se JSON vazio ou erro → workflow GitHub Actions falhou
 - Rodar manualmente: aba Actions no GitHub → Run workflow
 

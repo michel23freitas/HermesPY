@@ -412,7 +412,7 @@ def tool_shell_read(command):
     return run_cmd(command, timeout=15)
 
 def tool_marmitex_cardapio():
-    JSON_URL = "https://raw.githubusercontent.com/michel23freitas/HermesPY/main/cardapio.json"
+    JSON_URL = "https://raw.githubusercontent.com/michel23freitas/HermesPY/refs/heads/main/cardapio.json"
     try:
         r = requests.get(JSON_URL, timeout=10)
         if r.status_code != 200:
