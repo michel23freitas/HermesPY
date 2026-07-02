@@ -29,7 +29,7 @@ async def scrape():
         page = await browser.new_page()
 
         try:
-            await page.goto(URL, wait_until="networkidle", timeout=30000)
+            await page.goto(URL, wait_until="networkidle", timeout=60000)
         except Exception as e:
             resultado["erro"] = f"Timeout ao carregar site: {e}"
             with open("cardapio.json", "w", encoding="utf-8") as f:
