@@ -37,7 +37,7 @@ jobs:
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
-          git pull --rebase origin main
           git add cardapio.json
+          git pull --rebase origin main
           git diff --staged --quiet || git commit -m "cardapio: $(date '+%Y-%m-%d %H:%M')"
-          git push origin HEAD:main
+          git push
