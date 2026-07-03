@@ -95,12 +95,27 @@ async def scrape():
         try:
             # PASSO 1: Abre a home
             await page.goto(BASE_URL, wait_until="domcontentloaded", timeout=TIMEOUT_MS)
+            await page.wait_for_timeout(4000)  # tempo extra pro JS renderizar
 
-            # PASSO 2: Clica em "Faça seu pedido online"
-            botao_pedido = page.locator("text=Faça seu pedido online")
-            await botao_pedido.wait_for(state="visible", timeout=15000)
-            await botao_pedido.click()
-            await page.wait_for_timeout(2000)
+            # DEBUG: salva estado da pagina antes de tentar clicar
+            await page.screenshot(path="debug_home.png", full_page=True)
+            with open("debug_home.html", "w", encoding="utf-8") as f:
+                f.write(await page.content())
+
+            # PASSO 2: Clica em "Faca seu pedido online" (busca ampla, case-insensitive)
+            botao_pedido = page.get_by_text("Faça seu pedido online", exact=False)
+            if await botao_pedido.count() == 0:
+                botao_pedido = page.locator("text=/faça seu pedido/i")
+
+            if await botao_pedido.count() > 0:
+                await botao_pedido.first.click()
+                await page.wait_for_timeout(2000)
+            else:
+                resultado["erro"] = "Botao nao encontrado. Ver debug_home.png/html"
+                await browser.close()
+                with open("cardapio.json", "w", encoding="utf-8") as f:
+                    json.dump(resultado, f, ensure_ascii=False, indent=2)
+                return
 
             # PASSO 3: Verifica se popup "Delivery fechado" apareceu
             popup = page.locator("text=Delivery online fechado")
