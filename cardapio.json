@@ -1,10 +1,9 @@
 {
-  "data": "2026-07-01",
+  "data": "2026-07-02",
   "dia_semana": "quinta-feira",
-  "hora_scraping": "23:46",
-  "aberto": false,
+  "hora_scraping": "13:19",
+  "aberto": true,
   "itens": [],
   "url_pedido": "https://www.marmitexmarisa.com.br/cardapio/itens/cardapio-quinta-feira",
-  "url_scraping": "https://www.marmitexmarisa.com.br/cardapio/itens/cardapio-quinta-feira?dvc=mobile&ed_mobile_iframe=1",
-  "erro": "Timeout ao carregar site: Page.wait_for_selector: Timeout 60000ms exceeded.\nCall log:\n  - waiting for locator(\".card-item-menu[data-dadositem]\") to be visible\n"
+  "url_scraping": "https://www.marmitexmarisa.com.br/cardapio/itens/cardapio-quinta-feira?dvc=mobile&ed_mobile_iframe=1"
 }
