@@ -1,9 +1,9 @@
 {
-  "data": "2026-07-02",
-  "dia_semana": "quinta-feira",
-  "hora_scraping": "13:19",
-  "aberto": true,
+  "data": "2026-07-03",
+  "dia_semana": "sexta-feira",
+  "hora_scraping": "12:15",
+  "aberto": false,
   "itens": [],
-  "url_pedido": "https://www.marmitexmarisa.com.br/cardapio/itens/cardapio-quinta-feira",
-  "url_scraping": "https://www.marmitexmarisa.com.br/cardapio/itens/cardapio-quinta-feira?dvc=mobile&ed_mobile_iframe=1"
+  "url_pedido": "https://www.marmitexmarisa.com.br/cardapio/itens/cardapio-sexta-feira",
+  "erro": "Locator.wait_for: Timeout 15000ms exceeded.\nCall log:\n  - waiting for locator(\"text=Faça seu pedido online\") to be visible\n"
 }
