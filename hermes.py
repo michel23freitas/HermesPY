@@ -478,14 +478,13 @@ def tool_ping_windows():
         return f"Erro ao pingar: {e}"
 
 def tool_ligar_windows():
-    tool_wol_windows()
-    time.sleep(20)
-    for _ in range(6):
+    for tentativa in range(3):
+        tool_wol_windows()
+        time.sleep(30)
         status = tool_ping_windows()
         if "ONLINE" in status:
             return f"PC ligado e conectado.\n{status}"
-        time.sleep(10)
-    return "WOL enviado mas PC não respondeu ao ping ainda. Tente checar em 1 min."
+    return "WOL enviado 3x mas PC não respondeu ao ping."
 
 def tool_docker_inspect(container):
     result = run_cmd(f"docker inspect {container} --format 'Imagem: {{{{.Config.Image}}}}\\nStatus: {{{{.State.Status}}}}\\nNetwork: {{{{.HostConfig.NetworkMode}}}}\\nRestart: {{{{.HostConfig.RestartPolicy.Name}}}}' 2>&1")
