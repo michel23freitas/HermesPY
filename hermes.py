@@ -2,6 +2,7 @@ import os, signal, telebot, subprocess, json, traceback, threading, time, reques
 from datetime import datetime
 from openai import OpenAI
 from dotenv import load_dotenv
+from wakeonlan import send_magic_packet
 
 load_dotenv()
 
@@ -269,6 +270,8 @@ TOOLS = [
     {"type":"function","function":{"name":"task_manage","description":"Gerencia tarefas de monitoramento dinâmico. Tipos disponíveis: monitor_ram | monitor_container | monitor_temperatura.","parameters":{"type":"object","properties":{"action":{"type":"string","enum":["add","list","remove"]},"tipo":{"type":"string","description":"Tipo da tarefa: monitor_ram | monitor_container | monitor_temperatura"},"config":{"type":"object","description":"Configuração: {limit: 85} para ram/temp, {container: 'nome'} para container"},"task_id":{"type":"integer","description":"ID da tarefa (necessário para remove)"}},"required":["action"]}}},
     {"type":"function","function":{"name":"shell_read","description":"Executa comandos de leitura no sistema. Use para: dmesg, journalctl, crontab, ps, df, free, ip, cat, systemctl. NAO use para comandos que modificam o sistema.","parameters":{"type":"object","properties":{"command":{"type":"string","description":"Comando shell de leitura a executar."}},"required":["command"]}}},
     {"type":"function","function":{"name":"marmitex_cardapio","description":"Busca o cardápio do dia do Marmitex Marisa. Retorna se está aberto, os itens disponíveis com preços e o link para pedido.","parameters":{"type":"object","properties":{},"required":[]}}},
+    {"type":"function","function":{"name":"ligar_windows","description":"Liga o PC Windows via Wake-on-LAN e confirma se ficou online via ping. Use quando o usuário pedir para ligar o PC/computador/Windows.","parameters":{"type":"object","properties":{},"required":[]}}},
+    {"type":"function","function":{"name":"ping_windows","description":"Verifica se o PC Windows está ligado e acessível na rede via ping.","parameters":{"type":"object","properties":{},"required":[]}}},
 ]
 
 def tool_docker_ps():
@@ -451,6 +454,33 @@ def tool_marmitex_cardapio():
     except Exception as e:
         return f"Erro ao buscar cardápio Marisa: {e}"
 
+WOL_MAC = "C8:7F:54:63:36:C2"
+WOL_BROADCAST = "192.168.15.255"
+WINDOWS_IP = "192.168.15.10"
+
+def tool_wol_windows():
+    try:
+        send_magic_packet(WOL_MAC, ip_address=WOL_BROADCAST)
+        return "Pacote WOL enviado."
+    except Exception as e:
+        return f"Erro ao enviar WOL: {e}"
+
+def tool_ping_windows():
+    result = run_cmd(f"ping -c 3 -W 2 {WINDOWS_IP}")
+    if "0 received" in result or "100% packet loss" in result:
+        return f"Windows OFFLINE ({WINDOWS_IP})"
+    return f"Windows ONLINE ({WINDOWS_IP})"
+
+def tool_ligar_windows():
+    tool_wol_windows()
+    time.sleep(20)
+    for _ in range(6):
+        status = tool_ping_windows()
+        if "ONLINE" in status:
+            return f"PC ligado e conectado.\n{status}"
+        time.sleep(10)
+    return "WOL enviado mas PC não respondeu ao ping ainda. Tente checar em 1 min."
+
 def tool_docker_inspect(container):
     result = run_cmd(f"docker inspect {container} --format 'Imagem: {{{{.Config.Image}}}}\\nStatus: {{{{.State.Status}}}}\\nNetwork: {{{{.HostConfig.NetworkMode}}}}\\nRestart: {{{{.HostConfig.RestartPolicy.Name}}}}' 2>&1")
     volumes = run_cmd(f"docker inspect {container} --format '{{{{range .Mounts}}}}{{{{.Source}}}} → {{{{.Destination}}}}\\n{{{{end}}}}'")
@@ -525,6 +555,8 @@ TOOL_MAP = {
     "task_manage":     lambda a: tool_task_manage(a["action"], a.get("tipo"), a.get("config"), a.get("task_id")),
     "shell_read":      lambda a: tool_shell_read(a["command"]),
     "marmitex_cardapio": lambda a: tool_marmitex_cardapio(),
+    "ligar_windows":   lambda a: tool_ligar_windows(),
+    "ping_windows":    lambda a: tool_ping_windows(),
 }
 
 def execute_tool(name, args):
