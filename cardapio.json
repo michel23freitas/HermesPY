@@ -1,9 +1,9 @@
 {
-  "data": "2026-07-03",
-  "dia_semana": "sexta-feira",
-  "hora_scraping": "12:15",
+  "data": "2026-07-06",
+  "dia_semana": "segunda-feira",
+  "hora_scraping": "14:21",
   "aberto": false,
   "itens": [],
-  "url_pedido": "https://www.marmitexmarisa.com.br/cardapio/itens/cardapio-sexta-feira",
-  "erro": "Locator.wait_for: Timeout 15000ms exceeded.\nCall log:\n  - waiting for locator(\"text=Faça seu pedido online\") to be visible\n"
+  "url_pedido": "https://www.marmitexmarisa.com.br/cardapio/itens/cardapio-segunda-feira",
+  "erro": "Botao nao encontrado. Ver debug_home.png/html"
 }
