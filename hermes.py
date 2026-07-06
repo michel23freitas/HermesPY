@@ -466,10 +466,16 @@ def tool_wol_windows():
         return f"Erro ao enviar WOL: {e}"
 
 def tool_ping_windows():
-    result = run_cmd(f"ping -c 3 -W 2 {WINDOWS_IP}")
-    if "0 received" in result or "100% packet loss" in result:
+    try:
+        r = subprocess.run(
+            f"ping -c 3 -W 2 {WINDOWS_IP}",
+            shell=True, capture_output=True, text=True, timeout=15
+        )
+        if r.returncode == 0:
+            return f"Windows ONLINE ({WINDOWS_IP})"
         return f"Windows OFFLINE ({WINDOWS_IP})"
-    return f"Windows ONLINE ({WINDOWS_IP})"
+    except Exception as e:
+        return f"Erro ao pingar: {e}"
 
 def tool_ligar_windows():
     tool_wol_windows()
