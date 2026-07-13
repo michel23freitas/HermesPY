@@ -1,9 +1,9 @@
 {
-  "data": "2026-07-12",
-  "dia_semana": "domingo",
-  "hora_scraping": "12:33",
+  "data": "2026-07-13",
+  "dia_semana": "segunda-feira",
+  "hora_scraping": "13:56",
   "aberto": false,
   "itens": [],
-  "url_pedido": "https://www.marmitexmarisa.com.br/cardapio/itens/cardapio-domingo",
+  "url_pedido": "https://www.marmitexmarisa.com.br/cardapio/itens/cardapio-segunda-feira",
   "erro": "Botao nao encontrado. Ver debug_home.png/html"
 }
