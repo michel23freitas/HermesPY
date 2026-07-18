@@ -1,0 +1,10 @@
+# .gitignore para o railway-scraper
+__pycache__/
+*.py[cod]
+*.pyc
+.env
+*.png
+*.html
+debug_*
+cardapio.json
+.playwright/

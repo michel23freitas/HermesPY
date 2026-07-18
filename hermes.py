@@ -6,13 +6,15 @@ from wakeonlan import send_magic_packet
 
 load_dotenv()
 
-TELEGRAM_TOKEN  = os.getenv("TELEGRAM_TOKEN")
-ALLOWED_CHAT_ID = os.getenv("ALLOWED_CHAT_ID")
-OPENROUTER_KEY  = os.getenv("OPENROUTER_KEY")
-HA_TOKEN        = os.getenv("HA_TOKEN", "")
-HA_URL          = os.getenv("HA_URL", "http://192.168.15.15:8123")
-NETDATA_URL     = os.getenv("NETDATA_URL", "http://192.168.15.15:19999")
-MODEL           = os.getenv("MODEL", "openrouter/auto")
+TELEGRAM_TOKEN        = os.getenv("TELEGRAM_TOKEN")
+ALLOWED_CHAT_ID       = os.getenv("ALLOWED_CHAT_ID")
+OPENROUTER_KEY        = os.getenv("OPENROUTER_KEY")
+HA_TOKEN              = os.getenv("HA_TOKEN", "")
+HA_URL                = os.getenv("HA_URL", "http://192.168.15.15:8123")
+NETDATA_URL           = os.getenv("NETDATA_URL", "http://192.168.15.15:19999")
+MODEL                 = os.getenv("MODEL", "openrouter/auto")
+RAILWAY_SCRAPER_URL   = os.getenv("RAILWAY_SCRAPER_URL", "")   # ex: https://xxx.railway.app
+RAILWAY_TOKEN         = os.getenv("RAILWAY_TOKEN", "")
 
 SHUTDOWN_MARKER = "/app/data/.clean_shutdown"
 DB_PATH         = "/app/data/hermes.db"
@@ -415,34 +417,21 @@ def tool_shell_read(command):
     return run_cmd(command, timeout=15)
 
 def tool_marmitex_cardapio():
-    JSON_URL = "https://raw.githubusercontent.com/michel23freitas/HermesPY/refs/heads/main/cardapio.json"
-    def formatar_preco(valor):
-        if not valor:
-            return ""
-        return valor.replace(".", ",")
-
-    try:
-        r = requests.get(JSON_URL, timeout=10)
-        if r.status_code != 200:
-            return f"Erro ao buscar cardápio: HTTP {r.status_code}"
-        data = r.json()
-
+    def _formatar(data: dict) -> str:
+        """Formata o dict do cardápio (Railway ou GitHub) em texto legível."""
         if not data.get("aberto", False):
             url = data.get("url_pedido", "https://www.marmitexmarisa.com.br/cardapio/")
             data_ref = data.get("data", "?")
             return f"Marisa fechada hoje ({data_ref}).\nAcesse: {url}"
-
         itens = data.get("itens", [])
         url = data.get("url_pedido", "https://www.marmitexmarisa.com.br/cardapio/")
         data_ref = data.get("data", "?")
-
         if not itens:
             return f"Cardápio indisponível hoje ({data_ref}).\nAcesse: {url}"
-
         linhas = [f"Cardápio Marmitex Marisa - {data_ref}"]
         for item in itens:
             nome = item.get("nome", "")
-            preco = formatar_preco(item.get("preco", ""))
+            preco = (item.get("preco") or "").replace(".", ",")
             desc = item.get("descricao", "")
             linha = f"- {nome}"
             if preco: linha += f" — {preco}"
@@ -451,6 +440,29 @@ def tool_marmitex_cardapio():
         linhas.append(f"\nPedir: {url}")
         return "\n".join(linhas)
 
+    # ── Tenta Railway Scraper primeiro (ao vivo, mais fresco) ──────────────
+    if RAILWAY_SCRAPER_URL:
+        try:
+            headers = {"X-API-Token": RAILWAY_TOKEN} if RAILWAY_TOKEN else {}
+            r = requests.get(f"{RAILWAY_SCRAPER_URL}/cardapio", headers=headers, timeout=12)
+            if r.status_code == 200:
+                data = r.json()
+                if data.get("erro"):
+                    # Scraper rodou mas encontrou erro (captcha, site fora, etc.)
+                    # Cai no fallback abaixo
+                    pass
+                else:
+                    return _formatar(data)
+        except Exception:
+            pass  # Qualquer falha → fallback
+
+    # ── Fallback: JSON estático no GitHub (cardápio do último push) ────────
+    JSON_URL = "https://raw.githubusercontent.com/michel23freitas/HermesPY/refs/heads/main/cardapio.json"
+    try:
+        r = requests.get(JSON_URL, timeout=10)
+        if r.status_code != 200:
+            return f"Erro ao buscar cardápio: HTTP {r.status_code}"
+        return _formatar(r.json())
     except Exception as e:
         return f"Erro ao buscar cardápio Marisa: {e}"
 
