@@ -38,6 +38,36 @@ def _get_ai_client():
     return _ai_client
 
 
+# Ferramentas que exigem intenção explícita do usuário
+_INTENTIONAL_TOOLS = {"ligar_windows", "ping_windows"}
+
+# Palavras-chave que indicam intenção real de usar essas ferramentas
+_INTENT_KEYWORDS = [
+    "liga", "ligar", "acorda", "wake", "wol", "ping",
+    "online", "pc", "computador", "windows",
+]
+
+
+def _has_intent(user_message):
+    """Retorna True se a mensagem indica intenção explícita de usar WOL/ping."""
+    msg_lower = user_message.lower()
+    return any(kw in msg_lower for kw in _INTENT_KEYWORDS)
+
+
+def _is_tool_leak(response_text, user_message):
+    """Retorna True se a resposta parece ser output de ferramenta vazado sem intenção."""
+    if not _has_intent(user_message):
+        leak_indicators = [
+            "WOL enviado",
+            "PC ainda offline",
+            "Verifique BIOS",
+            "Windows ONLINE",
+            "Windows OFFLINE",
+        ]
+        return any(indicator in response_text for indicator in leak_indicators)
+    return False
+
+
 def run_agent(user_message, chat_id):
     """Processa uma mensagem do usuário via LLM com chamadas de tools.
 
@@ -109,6 +139,16 @@ def run_agent(user_message, chat_id):
         if not final:
             messages.append({"role": "user", "content": "Responda após usar ferramentas."})
             continue
+
+        # Filtra respostas de ferramenta que vazaram pro content sem intenção explícita
+        if _is_tool_leak(final, user_message):
+            logger.info("run_agent: blocked tool leak response for non-intent message %r", user_message)
+            messages.pop()
+            messages.append({"role": "assistant", "content": "Como posso ajudar?"})
+            final = "Olá! 👋 Como posso ajudar?"
+            db_save_message(chat_id, "assistant", final)
+            return final, tool_steps
+
         db_save_message(chat_id, "assistant", final)
         logger.info("run_agent: final answer=%r", final[:100])
         return final, tool_steps
