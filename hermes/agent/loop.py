@@ -1,29 +1,10 @@
 """Loop do agente LLM: run_agent com iteração de tools."""
 
 import json
-import logging
-import os
 
 from hermes.db import db_load_conversation, db_save_message
 from hermes.tools.registry import TOOLS, execute_tool
 from hermes.agent.prompts import get_system_prompt
-from hermes.config import DB_PATH
-
-logger = logging.getLogger(__name__)
-
-# Configura logging para arquivo se ainda não configurado
-_LOG_DIR = "/app/data"
-_LOG_FILE = "/app/data/hermes_agent.log"
-
-if not logging.getLogger().handlers:
-    logging.basicConfig(
-        level=logging.INFO,
-        format="%(asctime)s %(name)s %(levelname)s %(message)s",
-        handlers=[
-            logging.FileHandler(_LOG_FILE, encoding="utf-8"),
-            logging.StreamHandler(),
-        ],
-    )
 
 # Cliente OpenAI (OpenRouter) — lazy init
 _ai_client = None
@@ -86,8 +67,6 @@ def run_agent(user_message, chat_id):
     # Ferramentas que exigem intenção explícita do usuário
     INTENTIONAL_TOOLS = {"ligar_windows", "ping_windows"}
 
-    logger.info("run_agent: chat_id=%s msg=%r", chat_id, user_message)
-
     for i in range(7):
         resp = ai_client.chat.completions.create(
             model=MODEL, messages=messages, tools=TOOLS,
@@ -116,7 +95,6 @@ def run_agent(user_message, chat_id):
                     for kw in ["liga", "ligar", "acorda", "wake", "wol", "ping", "online", "pc", "computador", "windows"]
                 )
                 if not has_intent:
-                    logger.info("run_agent: blocked intentional tool %s for non-intent message %r", tool_names, user_message)
                     messages.pop()
                     messages.append({"role": "assistant", "content": "Como posso ajudar?"})
                     final = "Olá! 👋 Como posso ajudar?"
@@ -142,7 +120,6 @@ def run_agent(user_message, chat_id):
 
         # Filtra respostas de ferramenta que vazaram pro content sem intenção explícita
         if _is_tool_leak(final, user_message):
-            logger.info("run_agent: blocked tool leak response for non-intent message %r", user_message)
             messages.pop()
             messages.append({"role": "assistant", "content": "Como posso ajudar?"})
             final = "Olá! 👋 Como posso ajudar?"
@@ -150,14 +127,11 @@ def run_agent(user_message, chat_id):
             return final, tool_steps
 
         db_save_message(chat_id, "assistant", final)
-        logger.info("run_agent: final answer=%r", final[:100])
         return final, tool_steps
 
     # Loop esgotado sem resposta final de texto
     for m in reversed(messages):
         if m.get("role") == "assistant" and m.get("content"):
             db_save_message(chat_id, "assistant", m["content"])
-            logger.info("run_agent: exhausted loop, returning last assistant msg")
             return m["content"], tool_steps
-    logger.warning("run_agent: exhausted loop with no assistant content")
     return "Não consegui processar.", tool_steps
