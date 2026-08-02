@@ -32,5 +32,5 @@ homeassistant-backup-YYYY-MM-DD.tar.gz
 - Listar backups: shell_read "ls -lh /opt/backup-pending/"
 
 ## Volume no compose do Hermes
-- /opt/backup-pending:/opt/backup-pending
-- /mnt/backups/windows:/mnt/backups/windows:ro
+- /opt/backup-pending:/opt/backup-pending (backup aguardando envio)
+- /mnt/backups/windows → PC Windows (montagem no HAOS, não no Hermes — evita crash quando PC offline)

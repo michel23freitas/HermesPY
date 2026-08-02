@@ -14,7 +14,6 @@ services:
       - /opt/hermes/knowledge:/app/knowledge
       - /opt/homeassistant/config:/opt/homeassistant/config:ro
       - /opt/musicassistant:/opt/musicassistant:ro
-      - /mnt/backups/windows:/mnt/backups/windows:ro
       - /opt/backup-pending:/opt/backup-pending
       - /etc/cron.d:/host_cron
     environment:

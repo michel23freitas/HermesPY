@@ -10,7 +10,6 @@ services:
       - /sys:/sys:ro
       - /var/log:/host_log:ro
       - /opt/hermes/data:/app/data
-      - /mnt/backups/windows:/mnt/backups/windows:ro
       - /opt/backup-pending:/opt/backup-pending
       - /etc/cron.d:/host_cron
       - /opt/hermes/knowledge:/app/knowledge
