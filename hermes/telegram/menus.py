@@ -11,6 +11,7 @@ from telebot.types import InlineKeyboardMarkup, InlineKeyboardButton
 
 # Cada categoria: (label do botão principal, callback_data)
 MAIN_MENU_BUTTONS = [
+    ("🖥️ Ligar PC",      "hms:system:wol"),
     ("🖥️ Sistema",       "hms:system"),
     ("🏠 Home Assistant", "hms:ha"),
     ("🐳 Docker",        "hms:docker"),
