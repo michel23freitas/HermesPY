@@ -17,7 +17,7 @@ Usuário pedir: "liga meu pc", "liga o windows", "liga meu computador", "acorda 
 > botão via ha_call_service(domain="button", service="press", entity_id=...).
 
 ## Fluxo obrigatório
-1. Chamar ligar_windows (aciona o botão WOL no HA e confirma via ping internamente)
+1. Chamar ligar_windows (aciona o botão WOL no HA e confirma a conectividade internamente — TCP primeiro, ping como fallback)
 2. Responder resultado direto ao usuário
 
 ## Diagnóstico se não ligar

@@ -117,7 +117,7 @@ def handle_menu_callback(bot, call):
         bot.answer_callback_query(call.id)
         return
 
-    # Ligar PC: feedback imediato + confirmação assíncrona após 30s
+    # Ligar PC: feedback imediato + confirmação assíncrona após 60s
     if data == "hms:system:wol":
         _start_wol_flow(bot, call)
         return
@@ -145,7 +145,7 @@ def handle_menu_callback(bot, call):
 
 
 def _start_wol_flow(bot, call):
-    """Liga o PC via botão WOL do HA: feedback imediato + confirmação após 30s."""
+    """Liga o PC via botão WOL do HA: feedback imediato + confirmação após 60s."""
     import threading
     import time
     from hermes.tools.wol import acionar_botao_wol, is_windows_online
@@ -173,9 +173,9 @@ def _start_wol_flow(bot, call):
     bot.edit_message_text("⚡ Computador ligando...", chat_id=chat_id,
                           message_id=message_id, reply_markup=build_main_menu())
 
-    # Confirmação assíncrona: após 30s pinga e atualiza a mensagem
+    # Confirmação assíncrona: após 60s pinga e atualiza a mensagem
     def _confirm():
-        time.sleep(30)
+        time.sleep(60)
         try:
             if is_windows_online():
                 final = "✅ Computador já está online!"
