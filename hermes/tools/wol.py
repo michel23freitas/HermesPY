@@ -10,6 +10,19 @@ from hermes.tools.ha_tools import tool_ha_call_service
 WOL_HA_BUTTON = "button.wake_on_lan_c8_7f_54_63_36_c2"
 
 
+def acionar_botao_wol():
+    """Aciona o botão WOL do Home Assistant. Retorna (ok: bool, mensagem: str)."""
+    result = tool_ha_call_service("button", "press", WOL_HA_BUTTON)
+    if "OK" not in result:
+        return False, f"Falha ao acionar botão WOL no HA ({WOL_HA_BUTTON}):\n{result}"
+    return True, "OK"
+
+
+def is_windows_online():
+    """True se o PC responder ao ping agora."""
+    return _ping_windows_bool()
+
+
 def tool_ping_windows():
     """Verifica conectividade atual do PC Windows via IP. Live-state only — no DB/memory."""
     try:
@@ -43,9 +56,9 @@ def tool_ligar_windows():
         return "PC já está ligado e conectado."
 
     # 2. Aciona o botão WOL do Home Assistant (o HA envia o magic packet)
-    result = tool_ha_call_service("button", "press", WOL_HA_BUTTON)
-    if "OK" not in result:
-        return f"Falha ao acionar botão WOL no HA ({WOL_HA_BUTTON}):\n{result}"
+    ok, msg = acionar_botao_wol()
+    if not ok:
+        return msg
 
     # 3. Poll curto de confirmação (~45s)
     for tentativa in range(3):  # 3 * 15s = 45s

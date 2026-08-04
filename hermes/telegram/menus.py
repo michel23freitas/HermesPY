@@ -11,7 +11,7 @@ from telebot.types import InlineKeyboardMarkup, InlineKeyboardButton
 
 # Cada categoria: (label do botão principal, callback_data)
 MAIN_MENU_BUTTONS = [
-    ("🖥️ Ligar PC",      "hms:system:wol"),
+    ("⚡ Ligar PC",      "hms:system:wol"),
     ("🖥️ Sistema",       "hms:system"),
     ("🏠 Home Assistant", "hms:ha"),
     ("🐳 Docker",        "hms:docker"),
@@ -28,7 +28,7 @@ SUB_MENUS = {
         ("💾 Disco",          "hms:system:disk"),
         ("🌡️ Temperatura",   "hms:system:temp"),
         ("⏱️ Uptime",         "hms:system:uptime"),
-        ("🖥️ Ligar PC",      "hms:system:wol"),
+        ("⚡ Ligar PC",      "hms:system:wol"),
     ],
     # Home Assistant
     "hms:ha": [
@@ -117,6 +117,11 @@ def handle_menu_callback(bot, call):
         bot.answer_callback_query(call.id)
         return
 
+    # Ligar PC: feedback imediato + confirmação assíncrona após 30s
+    if data == "hms:system:wol":
+        _start_wol_flow(bot, call)
+        return
+
     # Navegar para uma sub-categoria (sem action)
     if data in SUB_MENUS:
         label = _category_label(data)
@@ -139,6 +144,51 @@ def handle_menu_callback(bot, call):
     bot.answer_callback_query(call.id, "Callback não reconhecido.")
 
 
+def _start_wol_flow(bot, call):
+    """Liga o PC via botão WOL do HA: feedback imediato + confirmação após 30s."""
+    import threading
+    import time
+    from hermes.tools.wol import acionar_botao_wol, is_windows_online
+
+    chat_id = call.message.chat.id
+    message_id = call.message.message_id
+
+    # Já online?
+    if is_windows_online():
+        bot.answer_callback_query(call.id)
+        bot.edit_message_text("✅ Computador já está online!", chat_id=chat_id,
+                              message_id=message_id, reply_markup=build_main_menu())
+        return
+
+    # Aciona o botão WOL no HA (rápido)
+    ok, msg = acionar_botao_wol()
+    if not ok:
+        bot.answer_callback_query(call.id)
+        bot.edit_message_text(msg[:4000], chat_id=chat_id, message_id=message_id,
+                              reply_markup=build_main_menu())
+        return
+
+    # Feedback imediato
+    bot.answer_callback_query(call.id)
+    bot.edit_message_text("⚡ Computador ligando...", chat_id=chat_id,
+                          message_id=message_id, reply_markup=build_main_menu())
+
+    # Confirmação assíncrona: após 30s pinga e atualiza a mensagem
+    def _confirm():
+        time.sleep(30)
+        try:
+            if is_windows_online():
+                final = "✅ Computador já está online!"
+            else:
+                final = "⚠️ Computador ainda não respondeu na rede (WOL acionado)."
+            bot.edit_message_text(final, chat_id=chat_id, message_id=message_id,
+                                  reply_markup=build_main_menu())
+        except Exception:
+            pass
+
+    threading.Thread(target=_confirm, daemon=True).start()
+
+
 def _dispatch_action(cat, action, chat_id):
     """Retorna a resposta (string) para uma ação de menu."""
     from hermes.telegram.commands import (
@@ -150,7 +200,6 @@ def _dispatch_action(cat, action, chat_id):
     from hermes.tools.netdata_tools import tool_netdata_metrics
     from hermes.telegram.commands import format_ram_output, format_disk_output, format_temp_output
     from hermes.tools.system_tools import tool_system_uptime
-    from hermes.tools.wol import tool_ligar_windows
     from hermes.tools.docker_tools import (
         tool_docker_networks, tool_docker_volumes, tool_docker_logsum,
     )
@@ -161,7 +210,6 @@ def _dispatch_action(cat, action, chat_id):
         if action == "disk":     return format_disk_output(tool_netdata_metrics("disk"))
         if action == "temp":     return format_temp_output(tool_netdata_metrics("temperature"))
         if action == "uptime":   return tool_system_uptime()
-        if action == "wol":      return tool_ligar_windows()
 
     if cat == "ha":
         if action == "status":     return cmd_ha()
