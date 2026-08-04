@@ -1,10 +1,13 @@
-"""Ferramentas Wake-on-LAN (Windows): ping, ligar."""
+"""Ferramentas Wake-on-LAN (Windows): ping e ligar via botão WOL do Home Assistant."""
 
 import subprocess
 import time
 
-from hermes.config import WINDOWS_IP, WOL_MAC, WOL_BROADCAST
-from wakeonlan import send_magic_packet
+from hermes.config import WINDOWS_IP
+from hermes.tools.ha_tools import tool_ha_call_service
+
+# Entidade botão WOL criada no Home Assistant (o HA envia o magic packet)
+WOL_HA_BUTTON = "button.wake_on_lan_c8_7f_54_63_36_c2"
 
 
 def tool_ping_windows():
@@ -34,20 +37,20 @@ def _ping_windows_bool():
 
 
 def tool_ligar_windows():
-    """Liga o PC Windows via WOL. Live-state: se já online, retorna sem enviar WOL."""
+    """Liga o PC Windows acionando o botão WOL do Home Assistant e confirma via ping."""
     # 1. Verifica se já está ligado
     if _ping_windows_bool():
-        return "PC já está ligado e conectado…"
+        return "PC já está ligado e conectado."
 
-    # 2. Envia WOL e poll a cada ~15s por até ~3 minutos
-    try:
-        send_magic_packet(WOL_MAC, ip_address=WOL_BROADCAST)
-    except Exception as e:
-        return f"Erro ao enviar WOL: {e}"
+    # 2. Aciona o botão WOL do Home Assistant (o HA envia o magic packet)
+    result = tool_ha_call_service("button", "press", WOL_HA_BUTTON)
+    if "OK" not in result:
+        return f"Falha ao acionar botão WOL no HA ({WOL_HA_BUTTON}):\n{result}"
 
-    for tentativa in range(12):  # 12 * 15s = 180s = 3 minutos
+    # 3. Poll curto de confirmação (~45s)
+    for tentativa in range(3):  # 3 * 15s = 45s
         time.sleep(15)
         if _ping_windows_bool():
-            return f"PC ligado e conectado após {tentativa + 1} tentativa(s).\nWindows ONLINE ({WINDOWS_IP})"
+            return f"PC ligado e conectado após ~{(tentativa + 1) * 15}s.\nWindows ONLINE ({WINDOWS_IP})"
 
-    return "WOL enviado, mas PC não respondeu ao ping após ~3 minutos."
+    return "WOL acionado via Home Assistant. PC ainda não respondeu ao ping após ~45s (pode demorar um pouco mais)."

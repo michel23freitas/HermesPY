@@ -27,6 +27,7 @@ SUB_MENUS = {
         ("💾 Disco",          "hms:system:disk"),
         ("🌡️ Temperatura",   "hms:system:temp"),
         ("⏱️ Uptime",         "hms:system:uptime"),
+        ("🖥️ Ligar PC",      "hms:system:wol"),
     ],
     # Home Assistant
     "hms:ha": [
@@ -148,6 +149,7 @@ def _dispatch_action(cat, action, chat_id):
     from hermes.tools.netdata_tools import tool_netdata_metrics
     from hermes.telegram.commands import format_ram_output, format_disk_output, format_temp_output
     from hermes.tools.system_tools import tool_system_uptime
+    from hermes.tools.wol import tool_ligar_windows
     from hermes.tools.docker_tools import (
         tool_docker_networks, tool_docker_volumes, tool_docker_logsum,
     )
@@ -158,6 +160,7 @@ def _dispatch_action(cat, action, chat_id):
         if action == "disk":     return format_disk_output(tool_netdata_metrics("disk"))
         if action == "temp":     return format_temp_output(tool_netdata_metrics("temperature"))
         if action == "uptime":   return tool_system_uptime()
+        if action == "wol":      return tool_ligar_windows()
 
     if cat == "ha":
         if action == "status":     return cmd_ha()

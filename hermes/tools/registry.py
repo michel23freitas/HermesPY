@@ -165,7 +165,7 @@ TOOLS = [
             "command": {"type": "string"}},
             "required": ["command"]}}},
     {"type": "function", "function": {"name": "ligar_windows",
-        "description": "Liga PC Windows via WOL (ping prévio, poll de 15s x 12).",
+        "description": "Liga PC Windows acionando o botão WOL do Home Assistant (button.wake_on_lan_c8_7f_54_63_36_c2).",
         "parameters": {"type": "object", "properties": {}}}},
     {"type": "function", "function": {"name": "ping_windows",
         "description": "Verifica se o PC Windows está ligado via ping (live-state).",

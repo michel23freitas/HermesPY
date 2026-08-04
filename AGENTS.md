@@ -57,7 +57,7 @@ docker restart hermes
 
 ## Special Tools
 
-- **Wake-on-LAN**: `ligar_windows`, `ping_windows` (MAC: C8:7F:54:63:36:C2, IP: 192.168.15.10)
+- **Wake-on-LAN**: `ligar_windows` (aciona o botão WOL do Home Assistant `button.wake_on_lan_c8_7f_54_63_36_c2`), `ping_windows` (IP: 192.168.15.10)
 - **Marmitex**: `marmitex_cardapio` (fallback to Railway or GitHub JSON)
 - **Task management**: `task_manage` (add/list/remove) for monitoring (monitor_ram, monitor_container, monitor_temperatura)
 
